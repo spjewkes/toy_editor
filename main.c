@@ -25,8 +25,20 @@ int enableRawMode()
 	atexit(disableRawMode);
 
 	struct termios raw = orig_termios;
+	raw.c_iflag &= ~(BRKINT); // Disable BREAK handling
+	raw.c_iflag &= ~(ICRNL);  // Diable translation of carriage return to newline
+	raw.c_iflag &= ~(INPCK);  // Disable input parity checking
+	raw.c_iflag &= ~(ISTRIP); // Disable stripping off of 8th bit
+	raw.c_iflag &= ~(IXON);   // Disable control keys to pause/resume transmission
+
+	raw.c_oflag &= ~(OPOST);  // Diable implementation-defined output processing
+
 	raw.c_lflag &= ~(ECHO);   // Don't echo keys to terminal
 	raw.c_lflag &= ~(ICANON); // Disable canonical mode (input is available immediately)
+	raw.c_lflag &= ~(IEXTEN); // Disable implementation-defined input processing
+	raw.c_lflag &= ~(ISIG);   // Disiable signals
+
+	raw.c_cflag |= (CS8);     // Set character size mask to 8 bits
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
 		return -1;
@@ -47,9 +59,9 @@ int main()
 	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q')
 	{
 		if (iscntrl(c))
-			printf("%d\n", c);
+			printf("%d\r\n", c);
 		else
-			printf("%d ('%c')\n", c, c);
+			printf("%d ('%c')\r\n", c, c);
 	}
 	
 	return 0;
