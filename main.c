@@ -5,6 +5,14 @@
 #include <unistd.h>
 #include <errno.h>
 
+/**
+ * Defines
+ */
+
+/**
+ * Data
+ */
+
 // Store original terminal settings
 struct termios orig_termios;
 
@@ -14,6 +22,10 @@ void die(const char *s)
 	perror(s);
 	exit(1);
 }
+
+/**
+ * Terminal
+ */
 
 // Disable terminal raw mode
 void disableRawMode()
@@ -51,6 +63,10 @@ void enableRawMode()
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
 		die("Failed to set terminal raw mode");
 }
+
+/**
+ * Init
+ */
 
 // Main entry point
 int main()
