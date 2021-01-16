@@ -39,6 +39,9 @@ int enableRawMode()
 	raw.c_lflag &= ~(ISIG);   // Disiable signals
 
 	raw.c_cflag |= (CS8);     // Set character size mask to 8 bits
+
+	raw.c_cc[VMIN] = 0;       // Set minimum number of bytes before read() can return
+	raw.c_cc[VTIME] = 1;      // Set read() timeout to 1/10th of a second
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
 		return -1;
@@ -55,14 +58,19 @@ int main()
 		return errno;
 	}
 
-	char c;
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q')
+	while (1)
 	{
+		char c = '\0';
+		read(STDIN_FILENO, &c, 1);
+
 		if (iscntrl(c))
 			printf("%d\r\n", c);
 		else
 			printf("%d ('%c')\r\n", c, c);
+
+		if (c == 'q')
+			break;
 	}
-	
+
 	return 0;
 }
