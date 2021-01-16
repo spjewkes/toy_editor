@@ -8,20 +8,25 @@
 // Store original terminal settings
 struct termios orig_termios;
 
+// Print error and exit
+void die(const char *s)
+{
+	perror(s);
+	exit(1);
+}
+
 // Disable terminal raw mode
 void disableRawMode()
 {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
-		perror("Failed to restore original terminal settings");
-
-	// Don't return a value from this function
+		die("Failed to restore original terminal settings");
 }
 
 // Enable terminal raw mode
-int enableRawMode()
+void enableRawMode()
 {
 	if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
-		return -1;
+		die("Failed to fetch original terminal settings");
 	atexit(disableRawMode);
 
 	struct termios raw = orig_termios;
@@ -44,24 +49,19 @@ int enableRawMode()
 	raw.c_cc[VTIME] = 1;      // Set read() timeout to 1/10th of a second
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
-		return -1;
-
-	return 0;
+		die("Failed to set terminal raw mode");
 }
 
 // Main entry point
 int main()
 {
-	if (enableRawMode() == -1)
-	{
-		perror("Error trying to enable terminal raw mode");
-		return errno;
-	}
+	enableRawMode();
 
 	while (1)
 	{
 		char c = '\0';
-		read(STDIN_FILENO, &c, 1);
+		if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
+			die("Failed to read byte");
 
 		if (iscntrl(c))
 			printf("%d\r\n", c);
