@@ -1,9 +1,10 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <errno.h>
 
 /**
  * Defines
@@ -15,8 +16,13 @@
  * Data
  */
 
-// Store original terminal settings
-struct termios orig_termios;
+// Global configuration
+struct editorConfig
+{
+	int screenrows;
+	int screencols;
+	struct termios orig_termios; // Store original terminal settings
+} CFG;
 
 // Print error and exit
 void die(const char *s)
@@ -35,18 +41,18 @@ void die(const char *s)
 // Disable terminal raw mode
 void disableRawMode()
 {
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &CFG.orig_termios) == -1)
 		die("Failed to restore original terminal settings");
 }
 
 // Enable terminal raw mode
 void enableRawMode()
 {
-	if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+	if (tcgetattr(STDIN_FILENO, &CFG.orig_termios) == -1)
 		die("Failed to fetch original terminal settings");
 	atexit(disableRawMode);
 
-	struct termios raw = orig_termios;
+	struct termios raw = CFG.orig_termios;
 	raw.c_iflag &= ~(BRKINT); // Disable BREAK handling
 	raw.c_iflag &= ~(ICRNL);  // Diable translation of carriage return to newline
 	raw.c_iflag &= ~(INPCK);  // Disable input parity checking
@@ -82,6 +88,22 @@ char editorReadKey()
 	return c;
 }
 
+int getWindowSize(int *rows, int *cols)
+{
+	struct winsize ws;
+
+	if (!rows || !cols)
+		return -1;
+
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+		return -1;
+
+	*cols = ws.ws_col;
+	*rows = ws.ws_row;
+
+	return 0;
+}
+
 /**
  * Output
  */
@@ -89,7 +111,7 @@ char editorReadKey()
 void editorDrawRows()
 {
 	int y;
-	for (y = 0; y < 24; y++)
+	for (y = 0; y < CFG.screenrows; y++)
 	{
 		write(STDOUT_FILENO, "~\r\n", 3);
 	}
@@ -127,10 +149,18 @@ void editorProcessKeypress()
  * Init
  */
 
+// Initialze the global configuration
+void initEditor()
+{
+	if (getWindowSize(&CFG.screenrows, &CFG.screencols) == -1)
+		die("Failed to get window size");
+}
+
 // Main entry point
 int main()
 {
 	enableRawMode();
+	initEditor();
 
 	while (1)
 	{
