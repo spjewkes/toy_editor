@@ -24,7 +24,8 @@ int enableRawMode()
 	atexit(disableRawMode);
 
 	struct termios raw = orig_termios;
-	raw.c_lflag &= ~(ECHO);
+	raw.c_lflag &= ~(ECHO);   // Don't echo keys to terminal
+	raw.c_lflag &= ~(ICANON); // Disable canonical mode (input is available immediately)
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
 		return -1;
