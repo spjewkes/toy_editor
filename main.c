@@ -126,6 +126,8 @@ int getWindowSize(int *rows, int *cols)
 	struct winsize ws;
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
 	{
+		// If ioctl does not work, send cursor to position 999,999. This will set it the
+		// maximum bounds of the screen itself
 		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) == 12)
 		{
 			return getCursorPosition(rows, cols);
@@ -148,7 +150,10 @@ void editorDrawRows()
 	int y;
 	for (y = 0; y < CFG.screenrows; y++)
 	{
-		write(STDOUT_FILENO, "~\r\n", 3);
+		write(STDOUT_FILENO, "~", 1);
+
+		if (y < CFG.screenrows - 1)
+			write(STDOUT_FILENO, "\r\n", 2);
 	}
 }
 
