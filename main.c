@@ -15,6 +15,14 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+enum editorKey
+{
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN
+};
+
 /**
  * Data
  */
@@ -89,6 +97,28 @@ char editorReadKey()
 		if (nread == -1 && errno != EAGAIN)
 			die("Failed to read byte");
 	}
+
+	if (c == '\x1b')
+	{
+		char seq[3];
+
+		if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+		if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+
+		if (seq[0] == '[')
+		{
+			switch(seq[1])
+			{
+			case 'A': return ARROW_UP;
+			case 'B': return ARROW_DOWN;
+			case 'C': return ARROW_RIGHT;
+			case 'D': return ARROW_LEFT;
+			}
+		}
+
+		return '\x1b';
+	}
+	
 	return c;
 }
 
@@ -244,16 +274,16 @@ void editorMoveCursor(char key)
 {
 	switch (key)
 	{
-	case 'a':
+	case ARROW_LEFT:
 		CFG.cx--;
 		break;
-	case 'd':
+	case ARROW_RIGHT:
 		CFG.cx++;
 		break;
-	case 'w':
+	case ARROW_UP:
 		CFG.cy--;
 		break;
-	case 's':
+	case ARROW_DOWN:
 		CFG.cy++;
 		break;
 	}
@@ -271,10 +301,10 @@ void editorProcessKeypress()
 		exit(0);
 		break;
 
-	case 'w':
-	case 's':
-	case 'a':
-	case 'd':
+	case ARROW_UP:
+	case ARROW_DOWN:
+	case ARROW_LEFT:
+	case ARROW_RIGHT:
 		editorMoveCursor(c);
 		break;
 	}
