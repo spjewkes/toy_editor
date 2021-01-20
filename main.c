@@ -187,6 +187,7 @@ void editorDrawRows(struct abuf *ab)
 	{
 		abAppend(ab, "~", 1);
 
+		abAppend(ab, "\x1b[K", 3);  // Clear line from cursor right
 		if (y < CFG.screenrows - 1)
 			abAppend(ab, "\r\n", 2);
 	}
@@ -197,7 +198,6 @@ void editorRefreshScreen()
 	struct abuf ab = ABUF_INIT;
 	
 	abAppend(&ab, "\x1b[?25l", 6);  // Turn off the cursor
-	abAppend(&ab, "\x1b[2J", 4);
 	abAppend(&ab, "\x1b[H", 3);
 
 	editorDrawRows(&ab);
