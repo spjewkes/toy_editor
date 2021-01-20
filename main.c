@@ -22,6 +22,7 @@
 // Global configuration
 struct editorConfig
 {
+	int cx, cy;
 	int screenrows;
 	int screencols;
 	struct termios orig_termios; // Store original terminal settings
@@ -223,6 +224,11 @@ void editorRefreshScreen()
 
 	editorDrawRows(&ab);
 
+	// Set cursor position
+	char buf[32];
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", CFG.cy + 1, CFG.cx + 1);
+	abAppend(&ab, buf, strlen(buf));
+
 	abAppend(&ab, "\x1b[H", 3);
 	abAppend(&ab, "\x1b[?25h", 6);  // Turn on the cursor
 
@@ -233,6 +239,25 @@ void editorRefreshScreen()
 /**
  * Input
  */
+
+void editorMoveCursor(char key)
+{
+	switch (key)
+	{
+	case 'a':
+		CFG.cx--;
+		break;
+	case 'd':
+		CFG.cx++;
+		break;
+	case 'w':
+		CFG.cy--;
+		break;
+	case 's':
+		CFG.cy++;
+		break;
+	}
+}
 
 void editorProcessKeypress()
 {
@@ -245,6 +270,13 @@ void editorProcessKeypress()
 		write(STDOUT_FILENO, "\x1b[H", 3);
 		exit(0);
 		break;
+
+	case 'w':
+	case 's':
+	case 'a':
+	case 'd':
+		editorMoveCursor(c);
+		break;
 	}
 }
 
@@ -255,6 +287,9 @@ void editorProcessKeypress()
 // Initialze the global configuration
 void initEditor()
 {
+	CFG.cx = 0;
+	CFG.cy = 0;
+
 	if (getWindowSize(&CFG.screenrows, &CFG.screencols) == -1)
 		die("Failed to get window size");
 }
