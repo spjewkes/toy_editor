@@ -88,7 +88,7 @@ void enableRawMode()
 }
 
 // Read a key press
-char editorReadKey()
+int editorReadKey()
 {
 	int nread;
 	char c = '\0';
@@ -270,7 +270,7 @@ void editorRefreshScreen()
  * Input
  */
 
-void editorMoveCursor(char key)
+void editorMoveCursor(int key)
 {
 	switch (key)
 	{
@@ -291,7 +291,7 @@ void editorMoveCursor(char key)
 
 void editorProcessKeypress()
 {
-	char c = editorReadKey();
+	int c = editorReadKey();
 
 	switch (c)
 	{
