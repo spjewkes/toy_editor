@@ -20,7 +20,9 @@ enum editorKey
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT,
 	ARROW_UP,
-	ARROW_DOWN
+	ARROW_DOWN,
+	PAGE_UP,
+	PAGE_DOWN
 };
 
 /**
@@ -107,12 +109,33 @@ int editorReadKey()
 
 		if (seq[0] == '[')
 		{
-			switch(seq[1])
+			if (seq[0] == '[')
 			{
-			case 'A': return ARROW_UP;
-			case 'B': return ARROW_DOWN;
-			case 'C': return ARROW_RIGHT;
-			case 'D': return ARROW_LEFT;
+				// Page up and page down
+				if (seq[1] >= '0' && seq[1] <= '9')
+				{
+					if (read(STDIN_FILENO, &seq[2], 1) != 1)
+						return '\x1b';
+					if (seq[2] == '~')
+					{
+						switch (seq[1])
+						{
+						case '5': return PAGE_UP;
+						case '6': return PAGE_DOWN;
+						}
+					}
+				}
+			}
+			else
+			{
+				// Cursor keys
+				switch(seq[1])
+				{
+				case 'A': return ARROW_UP;
+				case 'B': return ARROW_DOWN;
+				case 'C': return ARROW_RIGHT;
+				case 'D': return ARROW_LEFT;
+				}
 			}
 		}
 
@@ -275,16 +298,20 @@ void editorMoveCursor(int key)
 	switch (key)
 	{
 	case ARROW_LEFT:
-		CFG.cx--;
+		if (CFG.cx != 0)
+			CFG.cx--;
 		break;
 	case ARROW_RIGHT:
-		CFG.cx++;
+		if (CFG.cx != CFG.screencols - 1)
+			CFG.cx++;
 		break;
 	case ARROW_UP:
-		CFG.cy--;
+		if (CFG.cy != 0)
+			CFG.cy--;
 		break;
 	case ARROW_DOWN:
-		CFG.cy++;
+		if (CFG.cy != CFG.screenrows - 1)
+			CFG.cy++;
 		break;
 	}
 }
@@ -300,6 +327,15 @@ void editorProcessKeypress()
 		write(STDOUT_FILENO, "\x1b[H", 3);
 		exit(0);
 		break;
+
+	case PAGE_UP:
+	case PAGE_DOWN:
+	{
+		int times = CFG.screenrows;
+		while (times--)
+			editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+		break;
+	}
 
 	case ARROW_UP:
 	case ARROW_DOWN:
