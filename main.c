@@ -109,20 +109,17 @@ int editorReadKey()
 
 		if (seq[0] == '[')
 		{
-			if (seq[0] == '[')
+			// Page up and page down
+			if (seq[1] >= '0' && seq[1] <= '9')
 			{
-				// Page up and page down
-				if (seq[1] >= '0' && seq[1] <= '9')
+				if (read(STDIN_FILENO, &seq[2], 1) != 1)
+					return '\x1b';
+				if (seq[2] == '~')
 				{
-					if (read(STDIN_FILENO, &seq[2], 1) != 1)
-						return '\x1b';
-					if (seq[2] == '~')
+					switch (seq[1])
 					{
-						switch (seq[1])
-						{
-						case '5': return PAGE_UP;
-						case '6': return PAGE_DOWN;
-						}
+					case '5': return PAGE_UP;
+					case '6': return PAGE_DOWN;
 					}
 				}
 			}
@@ -282,7 +279,6 @@ void editorRefreshScreen()
 	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", CFG.cy + 1, CFG.cx + 1);
 	abAppend(&ab, buf, strlen(buf));
 
-	abAppend(&ab, "\x1b[H", 3);
 	abAppend(&ab, "\x1b[?25h", 6);  // Turn on the cursor
 
 	write(STDOUT_FILENO, ab.b, ab.len);
