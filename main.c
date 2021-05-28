@@ -1,3 +1,11 @@
+/**
+ * Includes
+ */
+
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -46,7 +54,7 @@ struct editorConfig
 	int screenrows;
 	int screencols;
 	int numrows;
-	erow row;
+	erow *row;
 	struct termios orig_termios; // Store original terminal settings
 } CFG;
 
@@ -223,6 +231,22 @@ int getWindowSize(int *rows, int *cols)
 }
 
 /**
+ * Row operations
+ */
+
+void editorAppendRow(char *s, size_t len)
+{
+	CFG.row = realloc(CFG.row, sizeof(erow) * (CFG.numrows + 1));
+
+	int at = CFG.numrows;
+	CFG.row[at].size = len;
+	CFG.row[at].chars = malloc(len + 1);
+	memcpy(CFG.row[at].chars, s, len);
+	CFG.row[at].chars[len] = '\0';
+	CFG.numrows++;
+}
+
+/**
  * File I/O
  */
 
@@ -234,19 +258,14 @@ void editorOpen(char *filename)
 	char *line = NULL;
 	size_t linecap = 0;
 	ssize_t linelen;
-	linelen = getline(&line, &linecap, fp);
-	if (linelen != -1)
+	while ((linelen = getline(&line, &linecap, fp)) != -1)
 	{
 		while (linelen > 0 && (line[linelen - 1] == '\n' ||
 							   line[linelen - 1] == '\r'))
 		{
 			linelen--;
 		}
-		CFG.row.size = linelen;
-		CFG.row.chars = malloc(linelen + 1);
-		memcpy(CFG.row.chars, line, linelen);
-		CFG.row.chars[linelen] = '\0';
-		CFG.numrows = 1;
+		editorAppendRow(line, linelen);
 	}
 	free(line);
 	fclose(fp);
@@ -297,7 +316,7 @@ void editorDrawRows(struct abuf *ab)
 	{
 		if (y >= CFG.numrows)
 		{
-			if (y == CFG.screenrows / 3)
+			if (CFG.numrows == 0 && y == CFG.screenrows / 3)
 			{
 				char welcome[80];
 				int welcomelen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
@@ -320,12 +339,12 @@ void editorDrawRows(struct abuf *ab)
 		}
 		else
 		{
-			int len = CFG.row.size;
+			int len = CFG.row[y].size;
 			if (len > CFG.screencols)
 			{
 				len = CFG.screencols;
 			}
-			abAppend(ab, CFG.row.chars, len);
+			abAppend(ab, CFG.row[y].chars, len);
 		}
 
 		abAppend(ab, "\x1b[K", 3);  // Clear line from cursor right
@@ -429,6 +448,7 @@ void initEditor()
 	CFG.cx = 0;
 	CFG.cy = 0;
 	CFG.numrows = 0;
+	CFG.row = NULL;
 
 	if (getWindowSize(&CFG.screenrows, &CFG.screencols) == -1)
 		die("Failed to get window size");
