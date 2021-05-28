@@ -51,6 +51,7 @@ typedef struct erow
 struct editorConfig
 {
 	int cx, cy;
+	int rowoff;
 	int screenrows;
 	int screencols;
 	int numrows;
@@ -308,13 +309,26 @@ void abFree(struct abuf *ab)
  * Output
  */
 
+void editorScroll()
+{
+	if (CFG.cy < CFG.rowoff)
+	{
+		CFG.rowoff = CFG.cy;
+	}
+	if (CFG.cy >= CFG.rowoff + CFG.screenrows)
+	{
+		CFG.rowoff = CFG.cy - CFG.screenrows + 1;
+	}
+}
+
 // Draw rows of the editor
 void editorDrawRows(struct abuf *ab)
 {
 	int y;
 	for (y = 0; y < CFG.screenrows; y++)
 	{
-		if (y >= CFG.numrows)
+		int filerow = y + CFG.rowoff;
+		if (filerow >= CFG.numrows)
 		{
 			if (CFG.numrows == 0 && y == CFG.screenrows / 3)
 			{
@@ -339,12 +353,12 @@ void editorDrawRows(struct abuf *ab)
 		}
 		else
 		{
-			int len = CFG.row[y].size;
+			int len = CFG.row[filerow].size;
 			if (len > CFG.screencols)
 			{
 				len = CFG.screencols;
 			}
-			abAppend(ab, CFG.row[y].chars, len);
+			abAppend(ab, CFG.row[filerow].chars, len);
 		}
 
 		abAppend(ab, "\x1b[K", 3);  // Clear line from cursor right
@@ -355,6 +369,8 @@ void editorDrawRows(struct abuf *ab)
 
 void editorRefreshScreen()
 {
+	editorScroll();
+
 	struct abuf ab = ABUF_INIT;
 	
 	abAppend(&ab, "\x1b[?25l", 6);  // Turn off the cursor
@@ -364,7 +380,7 @@ void editorRefreshScreen()
 
 	// Set cursor position
 	char buf[32];
-	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", CFG.cy + 1, CFG.cx + 1);
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (CFG.cy - CFG.rowoff) + 1, CFG.cx + 1);
 	abAppend(&ab, buf, strlen(buf));
 
 	abAppend(&ab, "\x1b[?25h", 6);  // Turn on the cursor
@@ -394,7 +410,7 @@ void editorMoveCursor(int key)
 			CFG.cy--;
 		break;
 	case ARROW_DOWN:
-		if (CFG.cy != CFG.screenrows - 1)
+		if (CFG.cy < CFG.numrows)
 			CFG.cy++;
 		break;
 	}
@@ -447,6 +463,7 @@ void initEditor()
 {
 	CFG.cx = 0;
 	CFG.cy = 0;
+	CFG.rowoff = 0;
 	CFG.numrows = 0;
 	CFG.row = NULL;
 
